@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div class="hero-text">
+    <span class="eyebrow">Research study</span>
+    <h1>POPROX News Article Annotation</h1>
+    <p class="lead">Help us understand how news articles relate to one another.</p>
+    <p class="muted">In this study, you will review pairs of news articles and classify their relationship as
+      <strong>Same Story</strong>, <strong>Related</strong>, or <strong>Unrelated</strong>.</p>
+
+    <div class="stat-row">
+      <div class="stat">
+        <span class="stat-value">{{ total_pairs }}</span>
+        <span class="stat-label">article pairs</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">{{ label_defs|length }}</span>
+        <span class="stat-label">categories</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value"><i data-lucide="save"></i></span>
+        <span class="stat-label">auto-saved</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-forms">
+    {% if annotator_id %}
+    <div class="card form-card">
+      <h2 class="card-title"><i data-lucide="hand"></i>Welcome back{% if annotator_name %}, {{ annotator_name }}{% endif %}</h2>
+      <p class="muted">Your annotation session is still active in this browser.</p>
+      <a class="btn btn-primary btn-block" href="{{ url_for('annotate') }}">Continue annotating <i data-lucide="arrow-right"></i></a>
+      <details class="new-session">
+        <summary>Start as a different annotator</summary>
+        <p class="small muted">Make sure you have saved your resume code first — you'll need it to return to your current annotations.</p>
+        {% include "_start_form.html" %}
+      </details>
+    </div>
+    {% else %}
+    <div class="card form-card">
+      <h2 class="card-title"><i data-lucide="play"></i>Start a new annotation session</h2>
+      {% include "_start_form.html" %}
+    </div>
+    {% endif %}
+
+    <div class="card form-card" id="resume">
+      <h2 class="card-title"><i data-lucide="key-round"></i>Resume with a code</h2>
+      <p class="small muted">Use the resume code you were given to continue on this or another device.</p>
+      <form method="post" action="{{ url_for('resume') }}" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="sr-only" for="resume_code">Resume code</label>
+        <input id="resume_code" name="resume_code" class="input input-code" placeholder="XXXX-XXXX-XXXX-XXXX"
+               autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" required>
+        <button type="submit" class="btn btn-secondary btn-block">Resume my annotations</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">The three categories</h2>
+  <div class="category-grid">
+    {% for l in label_defs %}
+    <div class="card category-card cat-{{ loop.index }}">
+      <span class="cat-badge">{{ loop.index }}</span>
+      <h3>{{ l.name }}</h3>
+      <p>{{ l.description }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">How it works</h2>
+  <ol class="steps">
+    <li><span class="step-num">1</span><div><strong>Read both articles.</strong> Each pair shows a headline, subheading and first paragraph for Article A and Article B.</div></li>
+    <li><span class="step-num">2</span><div><strong>Check the link text.</strong> The highlighted phrase in Article A is the link that points to Article B.</div></li>
+    <li><span class="step-num">3</span><div><strong>Choose a relationship.</strong> Your choice saves instantly and the next pair appears. You can go back and change any answer.</div></li>
+  </ol>
+</section>
+{% endblock %}

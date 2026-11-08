@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>POPROX bridge</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #F7F7FC; }
+  #page { display: block; width: 100%; height: 100%; border: 0; }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+             font: 500 15px system-ui, -apple-system, "Segoe UI", sans-serif; color: #667085; }
+</style>
+</head>
+<body>
+<div id="loading">Loading…</div>
+<iframe id="page" title="POPROX News Annotation"></iframe>
+<script>
+/*
+ * Bridge between the POPROX site and Streamlit.
+ *
+ * The real Flask pages (same templates, CSS and JS) are shown in the inner
+ * <iframe id="page">. Streamlit has no URL routes of its own, so every page
+ * load, form submit and fetch() call the page makes is sent to Python
+ * (streamlit_app.py) as this component's value. Python runs it through the
+ * Flask app and sends the response back as the component's arguments.
+ *
+ * Requests go one at a time, in order, so none can be lost between reruns.
+ */
+(function () {
+  "use strict";
+
+  var frame = document.getElementById("page");
+  var loading = document.getElementById("loading");
+  var SESSION_KEY = "poprox_session";        // Flask session cookie, kept in this browser
+  var tabToken = Math.random().toString(36).slice(2, 10);
+  var counter = 0;
+  var ready = false, started = false;
+  var inflight = null, queue = [];
+  var currentPath = "/";
+
+  // ---------------------------------------------------------------- Streamlit protocol
+  function post(type, data) {
+    data = data || {};
+    data.isStreamlitMessage = true;
+    data.type = type;
+    window.parent.postMessage(data, "*");
+  }
+
+  function fitHeight() {
+    var h = 900;
+    try { h = window.top.innerHeight || h; } catch (e) { /* different origin: CSS in streamlit_app.py sizes us */ }
+    post("streamlit:setFrameHeight", { height: h });
+  }
+
+  window.addEventListener("message", function (event) {
+    var msg = event.data;
+    if (!msg || msg.type !== "streamlit:render") return;
+    ready = true;
+    var res = (msg.args || {}).response;
+    if (inflight && res && res.id === inflight.req.id) {
+      var done = inflight;
+      inflight = null;
+      clearTimeout(done.timer);
+      saveCookie(res.cookie);
+      done.resolve(res);
+    }
+    if (!started) {
+      started = true;
+      navigate("GET", (msg.args || {}).start_path || "/");
+    }
+    pump();
+  });
+
+  // ---------------------------------------------------------------- session cookie
+  function loadCookie() {
+    try { return localStorage.getItem(SESSION_KEY); } catch (e) { return null; }
+  }
+  function saveCookie(value) {
+    try {
+      if (value) localStorage.setItem(SESSION_KEY, value);
+      else localStorage.removeItem(SESSION_KEY);
+    } catch (e) { /* private mode: participants can still use their resume code */ }
+  }
+
+  // ---------------------------------------------------------------- request queue
+  function request(req) {
+    return new Promise(function (resolve, reject) {
+      queue.push({ req: req, resolve: resolve, reject: reject });
+      pump();
+    });
+  }
+
+  function pump() {
+    if (!ready || inflight || !queue.length) return;
+    inflight = queue.shift();
+    var req = inflight.req;
+    req.id = tabToken + ":" + (++counter);
+    req.cookie = loadCookie();
+    req.referrer = currentPath;
+    var mine = inflight;
+    mine.timer = setTimeout(function () {
+      if (inflight === mine) {
+        inflight = null;
+        mine.reject(new Error("The server took too long to answer. Please try again."));
+        pump();
+      }
+    }, 60000);
+    post("streamlit:setComponentValue", { value: req, dataType: "json" });
+  }
+
+  // ---------------------------------------------------------------- page loads
+  function navigate(method, url, body) {
+    var req = { mode: "page", method: method, url: url };
+    if (body != null) { req.body = body; req.contentType = "application/x-www-form-urlencoded"; }
+    document.body.style.cursor = "progress";
+    return request(req).then(show, function (err) {
+      var w = frame.contentWindow;
+      if (w && w.POPROX && w.POPROX.toast) w.POPROX.toast(err.message, "error");
+    }).then(function () { document.body.style.cursor = ""; });
+  }
+
+  function show(res) {
+    if (res.kind === "download") return download(res);
+    if (res.kind === "page") {
+      currentPath = res.path || currentPath;
+      frame.srcdoc = res.html;
+    }
+  }
+
+  function download(res) {
+    var bin = atob(res.b64), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    var url = URL.createObjectURL(new Blob([bytes], { type: res.mime }));
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = res.filename || "download";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+  }
+
+  frame.addEventListener("load", function () { loading.style.display = "none"; });
+
+  // ---------------------------------------------------------------- page hooks
+  // Each page calls this first thing in <head> (streamlit_app.py adds the call).
+  window.POPROX_BRIDGE = {
+    install: function (win) {
+      // Page changes made by the site's own scripts (annotation.js uses POPROX.navigate).
+      win.POPROX = win.POPROX || {};
+      win.POPROX.navigate = function (url) { navigate("GET", String(url)); };
+
+      // URL bar updates are not possible inside Streamlit; ignore them.
+      win.history.pushState = function () {};
+      win.history.replaceState = function () {};
+
+      // fetch() -> Flask through Streamlit.
+      win.fetch = function (url, opts) {
+        opts = opts || {};
+        var headers = {};
+        var h = opts.headers || {};
+        if (typeof h.forEach === "function") h.forEach(function (v, k) { headers[k] = v; });
+        else Object.keys(h).forEach(function (k) { headers[k] = h[k]; });
+        return request({
+          mode: "fetch",
+          method: String(opts.method || "GET").toUpperCase(),
+          url: String(url),
+          headers: headers,
+          body: typeof opts.body === "string" ? opts.body : null
+        }).then(function (res) {
+          var empty = res.status === 204 || res.status === 304;
+          return new win.Response(empty ? null : res.body, {
+            status: res.status,
+            headers: { "Content-Type": res.contentType || "text/plain" }
+          });
+        });
+      };
+
+      // Links inside the site.
+      win.document.addEventListener("click", function (e) {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+        var a = e.target.closest && e.target.closest("a[href]");
+        if (!a) return;
+        var href = a.getAttribute("href");
+        if (!href || href.charAt(0) === "#") return;                  // in-page anchor
+        if (/^([a-z]+:)?\/\//i.test(href) || /^mailto:/i.test(href)) {  // external link
+          a.target = "_blank";
+          a.rel = "noopener";
+          return;
+        }
+        e.preventDefault();
+        navigate("GET", href);
+      });
+
+      // Forms (start, resume, sign out, admin login...).
+      win.document.addEventListener("submit", function (e) {
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+        var form = e.target;
+        var fd;
+        try { fd = new win.FormData(form, e.submitter); } catch (err) { fd = new win.FormData(form); }
+        var params = new win.URLSearchParams(fd).toString();
+        var method = String(form.getAttribute("method") || "GET").toUpperCase();
+        var action = form.getAttribute("action") || currentPath;
+        if (method === "GET") navigate("GET", action + (params ? (action.indexOf("?") === -1 ? "?" : "&") + params : ""));
+        else navigate(method, action, params);
+      });
+    }
+  };
+
+  fitHeight();
+  window.addEventListener("resize", fitHeight);
+  post("streamlit:componentReady", { apiVersion: 1 });
+})();
+</script>
+</body>
+</html>

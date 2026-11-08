@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.env
+# Participant results live on the persistent volume, never in git
+annotations/*
+!annotations/.gitkeep
+
+# Streamlit
+.streamlit/secrets.toml

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Annotate · POPROX News Annotation{% endblock %}
+{% block content %}
+<section class="card page-head">
+  <div class="page-head-text">
+    <h1>News Article Relationship Annotation</h1>
+    <p class="muted">Read both articles and select the relationship that best describes them.</p>
+  </div>
+  <div class="page-head-meta">
+    <span class="pill" id="pair-counter">Pair {{ initial.position }} of {{ initial.total }}</span>
+    <span class="completed-text"><strong id="completed-count">{{ progress.completed }}</strong> of {{ progress.total }} completed</span>
+  </div>
+  <div class="progress" role="progressbar" aria-label="Annotation progress"
+       aria-valuemin="0" aria-valuemax="{{ progress.total }}" aria-valuenow="{{ progress.completed }}" id="progress-bar">
+    <div class="progress-fill" id="progress-fill" style="width: {{ (100 * progress.completed / progress.total)|round(1) }}%"></div>
+  </div>
+</section>
+
+<section class="compare" id="compare" aria-live="polite" aria-busy="false">
+  <article class="card article-card" aria-labelledby="a-label">
+    <span class="article-tag" id="a-label">Article A</span>
+    <div class="field">
+      <span class="field-name">Headline</span>
+      <h2 class="headline" id="a-headline"></h2>
+    </div>
+    <div class="field">
+      <span class="field-name">Subheading</span>
+      <p class="subhead" id="a-subhead"></p>
+    </div>
+    <div class="field">
+      <span class="field-name">First Paragraph</span>
+      <p class="paragraph" id="a-paragraph"></p>
+    </div>
+  </article>
+
+  {# Middle column: the three label buttons, stacked, between Article A and Article B.
+     (This replaces the old "Link Text" box.) Each label's description appears as a
+     tooltip when the button is hovered or focused with the keyboard. #}
+  <div class="link-col">
+    <div class="choice-box">
+      <h2 id="question" class="question">How are these articles related?</h2>
+      <div class="label-buttons" role="group" aria-labelledby="question">
+        {% set icons = ['layers', 'git-branch', 'circle-slash'] %}
+        {% for l in label_defs %}
+        <button type="button" class="label-btn label-{{ loop.index }}" data-label="{{ l.name }}" aria-pressed="false"
+                aria-describedby="label-tip-{{ loop.index }}">
+          <span class="label-icon"><i data-lucide="{{ icons[loop.index0] if loop.index0 < 3 else 'tag' }}"></i></span>
+          <span class="label-name">{{ l.name }}</span>
+          <kbd>{{ loop.index }}</kbd>
+          <span class="label-check"><i data-lucide="check"></i></span>
+          {# Hover / focus tooltip with the label's description #}
+          <span class="label-tip" role="tooltip" id="label-tip-{{ loop.index }}">{{ l.description }}</span>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <article class="card article-card" aria-labelledby="b-label">
+    <span class="article-tag" id="b-label">Article B</span>
+    <div class="field">
+      <span class="field-name">Headline</span>
+      <h2 class="headline" id="b-headline"></h2>
+    </div>
+    <div class="field">
+      <span class="field-name">Subheading</span>
+      <p class="subhead" id="b-subhead"></p>
+    </div>
+    <div class="field">
+      <span class="field-name">First Paragraph</span>
+      <p class="paragraph" id="b-paragraph"></p>
+    </div>
+  </article>
+</section>
+
+<section class="card controls" aria-label="Pair navigation">
+  {# Optional notes box - commented out (Jinja comment, so it is not sent to the browser).
+     To bring it back, delete the Jinja comment markers around this block and un-comment the
+     "NOTES (optional)" parts in static/js/annotation.js.
+  <details class="notes" id="notes-details">
+    <summary><i data-lucide="message-square-text"></i>Add a note <span class="muted">(optional)</span></summary>
+    <label class="sr-only" for="notes-input">Notes for this pair</label>
+    <textarea id="notes-input" class="input" rows="2" maxlength="2000"
+              placeholder="Anything that made this pair difficult to judge?"></textarea>
+    <span class="small muted" id="notes-status">Notes save with your label, or when you leave this box.</span>
+  </details>
+  #}
+
+  <div class="nav-row">
+    <button type="button" class="btn btn-ghost" id="prev-btn"><i data-lucide="arrow-left"></i>Previous</button>
+    <span class="save-status" id="save-status" role="status" aria-live="polite"></span>
+    <button type="button" class="btn btn-ghost" id="next-btn">Next<i data-lucide="arrow-right"></i></button>
+  </div>
+  <p class="shortcut-hint small muted">Shortcuts: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> to label &middot; <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to move between pairs</p>
+</section>
+
+{% if resume_code %}
+<div class="modal-backdrop" id="code-modal" role="dialog" aria-modal="true" aria-labelledby="code-title">
+  <div class="modal card">
+    <div class="modal-icon"><i data-lucide="key-round"></i></div>
+    <h2 id="code-title">Save your resume code</h2>
+    <p class="muted">Your work saves automatically. If you switch devices or clear your browser, enter this code on the home page to pick up where you left off.</p>
+    <div class="code-display">
+      <code id="resume-code-value">{{ resume_code }}</code>
+      <button type="button" class="btn btn-ghost btn-sm" id="copy-code"><i data-lucide="copy"></i>Copy</button>
+    </div>
+    <p class="small muted">You can also find this code later on the Progress page.</p>
+    <button type="button" class="btn btn-primary btn-block" id="close-modal">I've saved it — start annotating</button>
+  </div>
+</div>
+{% endif %}
+
+<script type="application/json" id="initial-data">{{ {"initial": initial, "progress": {"completed": progress.completed, "total": progress.total}, "pair_ids": pair_ids, "urls": {"pair": url_for('api_pair', pair_id='__ID__'), "annotate": url_for('api_annotate'), "notes": url_for('api_notes'), "annotate_page": url_for('annotate')}}|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/annotation.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Researcher · POPROX News Annotation{% endblock %}
+{% block content %}
+<section class="card page-head">
+  <div class="page-head-text">
+    <h1>Researcher Export</h1>
+    <p class="muted">Download every participant's annotations.</p>
+  </div>
+</section>
+
+{% if not authed %}
+<section class="card form-card narrow">
+  <h2 class="card-title"><i data-lucide="lock"></i>Sign in</h2>
+  <form method="post" action="{{ url_for('admin') }}" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field-label" for="secret">Admin secret</label>
+    <input id="secret" name="secret" type="password" class="input" autocomplete="current-password" required>
+    <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+  </form>
+</section>
+{% else %}
+<section class="center-actions">
+  <a class="btn btn-primary" href="{{ url_for('admin_export', format='combined') }}"><i data-lucide="file-spreadsheet"></i>Combined workbook (.xlsx)</a>
+  <a class="btn btn-secondary" href="{{ url_for('admin_export', format='zip') }}"><i data-lucide="archive"></i>All files (.zip)</a>
+  <form method="post" action="{{ url_for('admin_logout') }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-ghost" type="submit"><i data-lucide="log-out"></i>Sign out</button>
+  </form>
+</section>
+
+<section class="card table-card">
+  <h2 class="card-title">{{ overview|length }} participant{{ '' if overview|length == 1 else 's' }}</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Annotator ID</th><th>Name</th><th>Created (UTC)</th><th>Progress</th>
+        {% for l in label_defs %}<th>{{ l.name }}</th>{% endfor %}<th>Last activity (UTC)</th></tr></thead>
+      <tbody>
+      {% for a in overview %}
+        <tr>
+          <td><code>{{ a.id }}</code></td>
+          <td>{{ a.name }}{% if a.error %}<span class="badge-error" title="{{ a.error }}">unreadable</span>{% endif %}</td>
+          <td>{{ a.created_at }}</td>
+          <td>{{ a.completed }} / {{ a.total }}</td>
+          {% for l in label_defs %}<td>{{ a.counts.get(l.name, 0) }}</td>{% endfor %}
+          <td>{{ a.last_activity }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="{{ 5 + label_defs|length }}" class="muted">No participants yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

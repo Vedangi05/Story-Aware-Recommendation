@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · POPROX News Annotation{% endblock %}
+{% block content %}
+<section class="card complete-hero">
+  <div class="complete-icon muted-icon"><i data-lucide="circle-alert"></i></div>
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ message }}</p>
+  <div class="center-actions"><a class="btn btn-primary" href="{{ url_for('index') }}">Back to home</a></div>
+</section>
+{% endblock %}

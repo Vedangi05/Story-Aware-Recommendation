@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Guidelines · POPROX News Annotation{% endblock %}
+{% block content %}
+<section class="card page-head">
+  <div class="page-head-text">
+    <h1>Annotation Guidelines</h1>
+    <p class="muted">Article A contains a link (the <strong>link text</strong>) that points to Article B. Decide how Article B relates to Article A.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">Label definitions</h2>
+  <div class="category-grid">
+    {% for l in label_defs %}
+    <div class="card category-card cat-{{ loop.index }}">
+      <span class="cat-badge">{{ loop.index }}</span>
+      <h3>{{ l.name }}</h3>
+      <p>{{ l.description }}</p>
+      <span class="small muted">Shortcut: <kbd>{{ loop.index }}</kbd></span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section two-col">
+  <div class="card prose">
+    <h2 class="card-title"><i data-lucide="list-checks"></i>Process</h2>
+    <ol>
+      <li>Read Article A's headline, subheading and first paragraph.</li>
+      <li>Note the highlighted <strong>link text</strong> — the phrase in Article A that links to Article B.</li>
+      <li>Read Article B.</li>
+      <li>Choose the one label that best describes the relationship. Your answer saves immediately and the next pair opens.</li>
+      <li>Not sure? Choose your best judgement and optionally add a note explaining why.</li>
+    </ol>
+  </div>
+  <div class="card prose">
+    <h2 class="card-title"><i data-lucide="lightbulb"></i>Tips</h2>
+    <ul>
+      <li><strong>Same Story</strong> means B is an <em>earlier stage</em> of the same event or ongoing development — it tells you what happened before A.</li>
+      <li>If B is an <strong>analysis or explainer</strong> about the same event, choose <strong>Related</strong>.</li>
+      <li>Sharing a person, place or topic alone makes a pair <strong>Related</strong>, not Same Story.</li>
+      <li>Some articles have no first paragraph; judge from the headline and subheading.</li>
+      <li>You can revisit and change any answer from the Progress page.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section">
+  <div class="card prose">
+    <h2 class="card-title"><i data-lucide="keyboard"></i>Keyboard shortcuts</h2>
+    <div class="shortcut-grid">
+      <div><kbd>1</kbd> Same Story</div>
+      <div><kbd>2</kbd> Related</div>
+      <div><kbd>3</kbd> Unrelated</div>
+      <div><kbd>&larr;</kbd> Previous pair</div>
+      <div><kbd>&rarr;</kbd> Next pair</div>
+    </div>
+  </div>
+</section>
+
+<div class="center-actions">
+  <a class="btn btn-primary" href="{{ url_for('annotate') if annotator_id else url_for('index') }}">{{ 'Continue annotating' if annotator_id else 'Get started' }} <i data-lucide="arrow-right"></i></a>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+# Fly.io alternative: `fly launch --no-deploy`, then
+#   fly volumes create annotations --size 1 --count 1
+#   fly secrets set SECRET_KEY=... ADMIN_SECRET=...
+#   fly deploy
+app = "poprox-annotation"
+primary_region = "ord"
+
+[build]
+
+[env]
+  ANNOTATIONS_DIR = "/var/data/annotations"
+  SESSION_COOKIE_SECURE = "1"
+  TRUST_PROXY = "1"
+  PORT = "8000"
+
+[[mounts]]
+  source = "annotations"
+  destination = "/var/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0

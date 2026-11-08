@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}POPROX News Article Annotation{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='images/favicon.svg') }}" type="image/svg+xml">
+</head>
+<body class="page-{{ active|default('other') }}">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('index') }}">
+        <span class="brand-mark">POPROX</span>
+        <span class="brand-sep" aria-hidden="true">|</span>
+        <span class="brand-sub">News Annotation</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="main-nav">
+        <i data-lucide="menu"></i>
+      </button>
+      <nav id="main-nav" class="nav" aria-label="Main">
+        <a href="{{ url_for('annotate') }}" class="{{ 'active' if active == 'annotate' }}"><i data-lucide="pencil-line"></i>Annotate</a>
+        <a href="{{ url_for('guidelines') }}" class="{{ 'active' if active == 'guidelines' }}"><i data-lucide="book-open"></i>Guidelines</a>
+        <a href="{{ url_for('progress_page') }}" class="{{ 'active' if active == 'progress' }}"><i data-lucide="bar-chart-3"></i>Progress</a>
+        <a href="{{ url_for('export') }}" class="nav-cta"><i data-lucide="download"></i>Export Results</a>
+        {% if annotator_id %}
+        <span class="nav-user" title="Annotator ID {{ annotator_id }}"><i data-lucide="user-round"></i>{{ annotator_name or annotator_id }}</span>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flashes">
+        {% for category, message in messages %}
+        <div class="flash flash-{{ category }}" role="status">
+          <i data-lucide="{{ {'error':'circle-alert','warning':'triangle-alert','success':'circle-check'}.get(category, 'info') }}"></i>
+          <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>POPROX News Article Annotation &middot; Research study</span>
+      {% if annotator_id %}
+      <form method="post" action="{{ url_for('signout') }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="link-button">Sign out</button>
+      </form>
+      {% endif %}
+    </div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="{{ url_for('static', filename='js/vendor/lucide.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

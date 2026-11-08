@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Progress · POPROX News Annotation{% endblock %}
+{% block content %}
+{% set pct = (100 * progress.completed / progress.total)|round(1) %}
+<section class="card page-head">
+  <div class="page-head-text">
+    <h1>Your Progress</h1>
+    <p class="muted">Select any pair to review or change your answer.</p>
+  </div>
+  <div class="page-head-meta">
+    <span class="completed-text"><strong>{{ progress.completed }}</strong> of {{ progress.total }} completed</span>
+  </div>
+  <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="{{ progress.total }}" aria-valuenow="{{ progress.completed }}">
+    <div class="progress-fill" style="width: {{ pct }}%"></div>
+  </div>
+</section>
+
+<section class="summary-grid">
+  <div class="card summary-card"><span class="summary-value">{{ progress.completed }}</span><span class="summary-label">Annotated</span></div>
+  {% for l in label_defs %}
+  <div class="card summary-card cat-{{ loop.index }}"><span class="summary-value">{{ progress.counts.get(l.name, 0) }}</span><span class="summary-label">{{ l.name }}</span></div>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <div class="legend">
+    {% for l in label_defs %}<span class="legend-item"><span class="dot cat-dot-{{ loop.index }}"></span>{{ l.name }}</span>{% endfor %}
+    <span class="legend-item"><span class="dot dot-empty"></span>Not yet annotated</span>
+  </div>
+  <div class="pair-grid">
+    {% set label_index = {} %}
+    {% for l in label_defs %}{% set _ = label_index.update({l.name: loop.index}) %}{% endfor %}
+    {% for p in pairs %}
+      {% set lab = progress.labels.get(p.id) %}
+      <a class="pair-chip {{ 'chip-' ~ label_index[lab] if lab else 'chip-empty' }}"
+         href="{{ url_for('annotate', pair=p.id) }}"
+         title="Pair {{ p.id }}: {{ lab or 'Not yet annotated' }} — {{ p.a_headline }}">{{ p.id }}</a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section two-col">
+  <div class="card">
+    <h2 class="card-title"><i data-lucide="key-round"></i>Your resume code</h2>
+    {% if resume_code %}
+    <p class="muted small">Enter this on the home page to continue on another device.</p>
+    <div class="code-display"><code>{{ resume_code }}</code></div>
+    {% else %}
+    <p class="muted small">Not available in this browser session.</p>
+    {% endif %}
+    <p class="small muted">Annotator ID: <code>{{ annotator_id }}</code></p>
+  </div>
+  <div class="card">
+    <h2 class="card-title"><i data-lucide="download"></i>Your results</h2>
+    <p class="muted small">Download an Excel copy of your annotations at any time.</p>
+    <a class="btn btn-secondary" href="{{ url_for('export') }}"><i data-lucide="file-spreadsheet"></i>Download My Results</a>
+  </div>
+</section>
+{% endblock %}

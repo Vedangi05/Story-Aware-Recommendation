@@ -1,0 +1,13 @@
+[client]
+toolbarMode = "viewer"
+showSidebarNavigation = false
+
+[theme]
+base = "light"
+backgroundColor = "#F7F7FC"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+runOnSave = false

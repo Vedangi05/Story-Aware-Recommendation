@@ -1,0 +1,26 @@
+# Render Blueprint – one web service with a persistent disk for annotations.
+services:
+  - type: web
+    name: poprox-annotation
+    runtime: python
+    plan: starter            # persistent disks require a paid instance
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers 2 --threads 4 --timeout 60 --bind 0.0.0.0:$PORT app:app
+    numInstances: 1
+    disk:
+      name: annotations
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ANNOTATIONS_DIR
+        value: /var/data/annotations
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_SECRET
+        sync: false          # you'll be prompted to enter it
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: TRUST_PROXY
+        value: "1"

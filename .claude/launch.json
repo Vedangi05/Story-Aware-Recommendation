@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "poprox-preview",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd '/Users/vedangideepakdeshpande/Desktop/MyProjects/Poprox-Experiment/Story-AwareExperiment Website' && ANNOTATIONS_DIR=/private/tmp/claude-501/-Users-vedangideepakdeshpande-Desktop-MyProjects-Poprox-Experiment-Story-AwareExperiment-Website/35cddc03-9901-4ff7-9f48-c3c7ca3cfd0f/scratchpad/annotations '/Users/vedangideepakdeshpande/Desktop/MyProjects/Poprox-Experiment/Story-AwareExperiment Website/.venv/bin/python' -m flask --app app run --port 5001"
+      ],
+      "port": 5001
+    },
+    {
+      "name": "poprox-streamlit",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd '/Users/vedangideepakdeshpande/Desktop/MyProjects/Poprox-Experiment/Story-AwareExperiment Website' && ANNOTATIONS_DIR=/private/tmp/claude-501/-Users-vedangideepakdeshpande-Desktop-MyProjects-Poprox-Experiment-Story-AwareExperiment-Website/35cddc03-9901-4ff7-9f48-c3c7ca3cfd0f/scratchpad/st_annotations ADMIN_SECRET=test-admin SECRET_KEY=local-test-key SUPABASE_URL=http://127.0.0.1:5055 SUPABASE_KEY=test-key '/Users/vedangideepakdeshpande/Desktop/MyProjects/Poprox-Experiment/Story-AwareExperiment Website/.venv/bin/python' -m streamlit run streamlit_app.py --server.port 8501 --server.headless true"
+      ],
+      "port": 8501
+    }
+  ]
+}

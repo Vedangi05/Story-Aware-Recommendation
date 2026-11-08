@@ -1,0 +1,7 @@
+<form method="post" action="{{ url_for('start') }}" class="stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label class="field-label" for="name-{{ annotator_id or 'new' }}">Your Name or Annotator ID</label>
+  <input id="name-{{ annotator_id or 'new' }}" name="name" class="input" placeholder="Enter your name or annotator ID"
+         maxlength="80" autocomplete="name" required>
+  <button type="submit" class="btn btn-primary btn-block">Start Annotating <i data-lucide="arrow-right"></i></button>
+</form>

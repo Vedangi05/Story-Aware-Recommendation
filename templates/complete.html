@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Complete · POPROX News Annotation{% endblock %}
+{% block content %}
+<section class="card complete-hero">
+  <div class="complete-icon"><i data-lucide="party-popper"></i></div>
+  <h1>Annotation Complete!</h1>
+  <p class="lead">Thank you for completing the news article annotation task.</p>
+  <p class="muted small">Your results are saved. You can review or change any answer.</p>
+</section>
+
+<section class="summary-grid">
+  <div class="card summary-card"><span class="summary-value">{{ progress.completed }}</span><span class="summary-label">Total pairs annotated</span></div>
+  {% for l in label_defs %}
+  <div class="card summary-card cat-{{ loop.index }}"><span class="summary-value">{{ progress.counts.get(l.name, 0) }}</span><span class="summary-label">{{ l.name }}</span></div>
+  {% endfor %}
+</section>
+
+<div class="center-actions">
+  <a class="btn btn-secondary" href="{{ url_for('progress_page') }}"><i data-lucide="list-checks"></i>Review My Annotations</a>
+  <a class="btn btn-primary" href="{{ url_for('export') }}"><i data-lucide="download"></i>Download My Results</a>
+</div>
+{% if resume_code %}
+<p class="center small muted">Resume code: <code>{{ resume_code }}</code></p>
+{% endif %}
+{% endblock %}
