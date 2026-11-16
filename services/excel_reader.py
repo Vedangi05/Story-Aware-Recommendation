@@ -97,7 +97,25 @@ class MasterDataset:
         self._by_id = {}
         self._labels = DEFAULT_LABELS
 
+    def _resolve_path(self):
+        if os.path.exists(self.path):
+            return self.path
+        base, ext = os.path.splitext(self.path)
+        for alt_ext in (".csv", ".xlsx"):
+            alt = base + alt_ext
+            if os.path.exists(alt):
+                self.path = alt
+                return alt
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+        for alt_name in ("article-link-annotation.csv", "article-link-annotation.xlsx"):
+            candidate = os.path.join(data_dir, alt_name)
+            if os.path.exists(candidate):
+                self.path = candidate
+                return candidate
+        return self.path
+
     def _stat(self):
+        self._resolve_path()
         st = os.stat(self.path)
         return (st.st_mtime_ns, st.st_size)
 

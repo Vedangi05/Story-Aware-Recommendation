@@ -34,10 +34,17 @@ class Config:
 
     # --- Storage ------------------------------------------------------------
     # The master dataset ships with the application and is only ever read.
-    default_master = os.path.join(BASE_DIR, "data", "article-link-annotation.csv")
-    if not os.path.exists(default_master):
-        default_master = os.path.join(BASE_DIR, "data", "article-link-annotation.xlsx")
-    MASTER_WORKBOOK = os.environ.get("MASTER_WORKBOOK", default_master)
+    csv_master = os.path.join(BASE_DIR, "data", "article-link-annotation.csv")
+    xlsx_master = os.path.join(BASE_DIR, "data", "article-link-annotation.xlsx")
+    env_master = os.environ.get("MASTER_WORKBOOK")
+    if env_master and os.path.exists(env_master):
+        MASTER_WORKBOOK = env_master
+    elif os.path.exists(csv_master):
+        MASTER_WORKBOOK = csv_master
+    elif os.path.exists(xlsx_master):
+        MASTER_WORKBOOK = xlsx_master
+    else:
+        MASTER_WORKBOOK = csv_master
     # Mount this directory on a persistent volume in production.
     ANNOTATIONS_DIR = os.environ.get("ANNOTATIONS_DIR", os.path.join(BASE_DIR, "annotations"))
 

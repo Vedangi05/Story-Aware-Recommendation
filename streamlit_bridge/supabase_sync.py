@@ -143,7 +143,9 @@ class SupabaseSync:
                 except FileNotFoundError:
                     break
                 except Exception as exc:  # network trouble, Supabase paused, ...
-                    self.last_error = f"{type(exc).__name__}: {exc}"
-                    log.warning("Upload of %s failed (%s); retrying in %ss", name, exc, delay)
+                    resp_detail = getattr(exc, "response", None)
+                    body_text = f" - {resp_detail.text}" if resp_detail is not None and resp_detail.text else ""
+                    self.last_error = f"{type(exc).__name__}: {exc}{body_text}"
+                    log.warning("Upload of %s failed (%s%s); retrying in %ss", name, exc, body_text, delay)
                     time.sleep(delay)
                     delay = min(delay * 2, 60)
