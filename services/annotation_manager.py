@@ -13,11 +13,11 @@ import os
 import threading
 from datetime import datetime, timezone
 
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 
 from .annotator_manager import is_valid_annotator_id
-from .excel_reader import PAIRS_SHEET, header_map, header_map_readonly, normalize_pair_id
+from .excel_reader import COLUMNS, LABELS_SHEET, PAIRS_SHEET, header_map, header_map_readonly, normalize_pair_id
 from .storage import atomic_write, backup_path, file_lock
 
 INFO_SHEET = "Annotator-info"
@@ -79,25 +79,76 @@ class AnnotationStore:
         with file_lock(path):
             if os.path.exists(path):
                 raise FileExistsError(path)
-            wb = load_workbook(self.dataset.path)  # full mode keeps formatting
-            ws = wb[PAIRS_SHEET]
-            cols = header_map(ws)
-            if "label" not in cols:
-                cols["label"] = ws.max_column + 1
-                set_text(ws.cell(row=1, column=cols["label"]), "Label")
-            if "notes" not in cols:
-                cols["notes"] = ws.max_column + 1
-                set_text(ws.cell(row=1, column=cols["notes"]), "Notes")
-            ts_col = ws.max_column + 1
-            header = ws.cell(row=1, column=ts_col)
-            set_text(header, TIMESTAMP_HEADER)
-            src = ws.cell(row=1, column=cols["notes"])
-            if src.has_style:
-                header.font = src.font.copy()
-                header.fill = src.fill.copy()
-                header.alignment = src.alignment.copy()
-                header.border = src.border.copy()
-            ws.column_dimensions[header.column_letter].width = 22
+
+            if self.dataset.path.lower().endswith(".csv"):
+                wb = Workbook()
+                ws = wb.active
+                ws.title = PAIRS_SHEET
+                header_keys = [
+                    "pair_no", "a_headline", "a_subhead", "a_paragraph",
+                    "link_text", "b_headline", "b_subhead", "b_paragraph",
+                    "label", "notes"
+                ]
+                headers = [COLUMNS[k] for k in header_keys] + [TIMESTAMP_HEADER]
+                ws.append(headers)
+                for col_idx in range(1, len(headers) + 1):
+                    c = ws.cell(row=1, column=col_idx)
+                    c.font = Font(bold=True, color="FFFFFF")
+                    c.fill = PatternFill("solid", fgColor="202A38")
+
+                widths = {1: 10, 2: 40, 3: 40, 4: 50, 5: 30, 6: 40, 7: 40, 8: 50, 9: 15, 10: 30, 11: 22}
+                for c_idx, w in widths.items():
+                    ws.column_dimensions[ws.cell(row=1, column=c_idx).column_letter].width = w
+
+                for p in self.dataset.pairs:
+                    pid = int(p["id"]) if p["id"].isdigit() else p["id"]
+                    row_data = [
+                        pid,
+                        p.get("a_headline", ""),
+                        p.get("a_subhead", ""),
+                        p.get("a_paragraph", ""),
+                        p.get("link_text", ""),
+                        p.get("b_headline", ""),
+                        p.get("b_subhead", ""),
+                        p.get("b_paragraph", ""),
+                        "",  # Label
+                        p.get("notes", ""),
+                        ""   # Annotated At
+                    ]
+                    ws.append([None] * len(row_data))
+                    r = ws.max_row
+                    for c_idx, val in enumerate(row_data, start=1):
+                        set_text(ws.cell(row=r, column=c_idx), val if val != "" else None)
+
+                lbl_sheet = wb.create_sheet(LABELS_SHEET)
+                lbl_sheet.append(["Label", "Description"])
+                for c in (lbl_sheet["A1"], lbl_sheet["B1"]):
+                    c.font = Font(bold=True, color="FFFFFF")
+                    c.fill = PatternFill("solid", fgColor="202A38")
+                lbl_sheet.column_dimensions["A"].width = 20
+                lbl_sheet.column_dimensions["B"].width = 60
+                for lbl in self.dataset.labels:
+                    lbl_sheet.append([lbl["name"], lbl["description"]])
+            else:
+                wb = load_workbook(self.dataset.path)  # full mode keeps formatting
+                ws = wb[PAIRS_SHEET]
+                cols = header_map(ws)
+                if "label" not in cols:
+                    cols["label"] = ws.max_column + 1
+                    set_text(ws.cell(row=1, column=cols["label"]), "Label")
+                if "notes" not in cols:
+                    cols["notes"] = ws.max_column + 1
+                    set_text(ws.cell(row=1, column=cols["notes"]), "Notes")
+                ts_col = ws.max_column + 1
+                header = ws.cell(row=1, column=ts_col)
+                set_text(header, TIMESTAMP_HEADER)
+                src = ws.cell(row=1, column=cols["notes"])
+                if src.has_style:
+                    header.font = src.font.copy()
+                    header.fill = src.fill.copy()
+                    header.alignment = src.alignment.copy()
+                    header.border = src.border.copy()
+                ws.column_dimensions[header.column_letter].width = 22
 
             if INFO_SHEET in wb.sheetnames:
                 del wb[INFO_SHEET]

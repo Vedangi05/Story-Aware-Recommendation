@@ -8,5 +8,7 @@ venv/
 annotations/*
 !annotations/.gitkeep
 
+.DS_Store
+
 # Streamlit
 .streamlit/secrets.toml

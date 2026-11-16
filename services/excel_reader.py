@@ -101,6 +101,40 @@ class MasterDataset:
         st = os.stat(self.path)
         return (st.st_mtime_ns, st.st_size)
 
+    def _load_csv(self):
+        import csv
+        with open(self.path, "r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.reader(f)
+            header_row = next(reader, None)
+            if not header_row:
+                raise DatasetError(f"Dataset CSV at {self.path} is empty")
+            wanted = {_norm_header(h): key for key, h in COLUMNS.items()}
+            cols = {}
+            for i, value in enumerate(header_row):
+                key = wanted.get(_norm_header(value))
+                if key and key not in cols:
+                    cols[key] = i
+            if "pair_no" not in cols:
+                raise DatasetError("Dataset CSV has no 'Pair #' column")
+
+            pairs, by_id = [], {}
+            for row in reader:
+                def get(key):
+                    idx = cols.get(key)
+                    return row[idx] if idx is not None and idx < len(row) else None
+
+                pid = normalize_pair_id(get("pair_no"))
+                if pid is None or pid in by_id:
+                    continue  # blank row (or duplicate id): skip
+                pair = {"id": pid}
+                for key in COLUMNS:
+                    if key not in ("pair_no", "label"):
+                        pair[key] = _text(get(key))
+                pair["index"] = len(pairs)
+                pairs.append(pair)
+                by_id[pid] = pair
+        return pairs, by_id
+
     def _ensure_loaded(self):
         try:
             stamp = self._stat()
@@ -111,41 +145,45 @@ class MasterDataset:
         with self._lock:
             if stamp == self._stamp:
                 return
-            wb = load_workbook(self.path, read_only=True, data_only=True)
-            try:
-                if PAIRS_SHEET not in wb.sheetnames:
-                    raise DatasetError(f"Worksheet '{PAIRS_SHEET}' not found in master workbook")
-                ws = wb[PAIRS_SHEET]
-                cols = header_map_readonly(ws)
-                pairs, by_id = [], {}
-                for row in ws.iter_rows(min_row=2, values_only=True):
-                    def get(key):
-                        idx = cols.get(key)
-                        return row[idx - 1] if idx and idx - 1 < len(row) else None
+            if self.path.lower().endswith(".csv"):
+                pairs, by_id = self._load_csv()
+                labels = DEFAULT_LABELS
+            else:
+                wb = load_workbook(self.path, read_only=True, data_only=True)
+                try:
+                    if PAIRS_SHEET not in wb.sheetnames:
+                        raise DatasetError(f"Worksheet '{PAIRS_SHEET}' not found in master workbook")
+                    ws = wb[PAIRS_SHEET]
+                    cols = header_map_readonly(ws)
+                    pairs, by_id = [], {}
+                    for row in ws.iter_rows(min_row=2, values_only=True):
+                        def get(key):
+                            idx = cols.get(key)
+                            return row[idx - 1] if idx and idx - 1 < len(row) else None
 
-                    pid = normalize_pair_id(get("pair_no"))
-                    if pid is None or pid in by_id:
-                        continue  # blank row (or duplicate id): skip
-                    pair = {"id": pid}
-                    for key in COLUMNS:
-                        if key not in ("pair_no", "label"):
-                            pair[key] = _text(get(key))
-                    pair["index"] = len(pairs)
-                    pairs.append(pair)
-                    by_id[pid] = pair
+                        pid = normalize_pair_id(get("pair_no"))
+                        if pid is None or pid in by_id:
+                            continue  # blank row (or duplicate id): skip
+                        pair = {"id": pid}
+                        for key in COLUMNS:
+                            if key not in ("pair_no", "label"):
+                                pair[key] = _text(get(key))
+                        pair["index"] = len(pairs)
+                        pairs.append(pair)
+                        by_id[pid] = pair
 
-                labels = []
-                if LABELS_SHEET in wb.sheetnames:
-                    for row in wb[LABELS_SHEET].iter_rows(min_row=2, values_only=True):
-                        if row and row[0] and str(row[0]).strip():
-                            labels.append({
-                                "name": str(row[0]).strip(),
-                                "description": _text(row[1] if len(row) > 1 else ""),
-                            })
-            finally:
-                wb.close()
+                    labels = []
+                    if LABELS_SHEET in wb.sheetnames:
+                        for row in wb[LABELS_SHEET].iter_rows(min_row=2, values_only=True):
+                            if row and row[0] and str(row[0]).strip():
+                                labels.append({
+                                    "name": str(row[0]).strip(),
+                                    "description": _text(row[1] if len(row) > 1 else ""),
+                                })
+                finally:
+                    wb.close()
             if not pairs:
-                raise DatasetError("No article pairs found in master workbook")
+                raise DatasetError(f"No article pairs found in {self.path}")
             self._pairs, self._by_id = pairs, by_id
             self._labels = labels or DEFAULT_LABELS
             self._stamp = stamp

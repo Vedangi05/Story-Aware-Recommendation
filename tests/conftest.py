@@ -9,7 +9,9 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-MASTER = os.path.join(ROOT, "data", "article-link-annotation.xlsx")
+MASTER_CSV = os.path.join(ROOT, "data", "article-link-annotation.csv")
+MASTER_XLSX = os.path.join(ROOT, "data", "article-link-annotation.xlsx")
+MASTER = MASTER_CSV if os.path.exists(MASTER_CSV) else MASTER_XLSX
 
 
 def sha256(path):
@@ -19,7 +21,8 @@ def sha256(path):
 
 @pytest.fixture
 def master_copy(tmp_path):
-    dst = tmp_path / "master.xlsx"
+    ext = os.path.splitext(MASTER)[1]
+    dst = tmp_path / f"master{ext}"
     shutil.copy(MASTER, dst)
     return str(dst)
 

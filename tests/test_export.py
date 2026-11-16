@@ -29,9 +29,22 @@ def test_participant_export(make_client):
     assert rows[1][8] == "Same Story" and rows[1][9] == "clear sequel"
     assert rows[3][8] == "Unrelated" and rows[2][8] is None
     # Original article data preserved
-    master = {r[0]: r for r in openpyxl.load_workbook(MASTER)["Article-pairs"].iter_rows(min_row=2, values_only=True) if r[0]}
-    for k in master:
-        assert rows[k][:8] == master[k][:8]
+    if MASTER.endswith(".xlsx"):
+        master = {r[0]: r for r in openpyxl.load_workbook(MASTER)["Article-pairs"].iter_rows(min_row=2, values_only=True) if r[0]}
+        for k in master:
+            assert rows[k][:8] == master[k][:8]
+    else:
+        import csv
+        with open(MASTER, "r", encoding="utf-8-sig") as f:
+            reader = csv.reader(f)
+            next(reader)
+            for r in reader:
+                if not r or not r[0]:
+                    continue
+                k = int(r[0]) if r[0].isdigit() else r[0]
+                expected = (k, *[(x or "").strip() for x in r[1:8]])
+                actual = (rows[k][0], *[(rows[k][i] or "").strip() for i in range(1, 8)])
+                assert actual == expected
     assert "Label-info" in wb.sheetnames
 
 

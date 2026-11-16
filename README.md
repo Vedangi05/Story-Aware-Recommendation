@@ -6,7 +6,7 @@ relationship between 100 pairs of news articles as **Same Story**, **Related** o
 their own Excel workbook on the server.
 
 ```
-data/article-link-annotation.xlsx   master dataset (read-only, ships with the app)
+data/article-link-annotation.csv    master dataset (read-only, ships with the app)
 annotations/annotator_<id>.xlsx     one results workbook per participant
 annotations/annotator_<id>.bak.xlsx previous version, used for automatic recovery
 ```
@@ -112,7 +112,7 @@ Put it behind HTTPS (e.g. Caddy or nginx + Let's Encrypt).
 | `SECRET_KEY` | Signs session cookies. **Set in production.** | If unset, a key is generated once and stored in `annotations/.secret_key` |
 | `ADMIN_SECRET` | Password for `/admin` and `/admin/export` | unset → admin area disabled (404) |
 | `ANNOTATIONS_DIR` | Where result workbooks are written – point at the persistent disk | `./annotations` |
-| `MASTER_WORKBOOK` | Path to the master dataset | `./data/article-link-annotation.xlsx` |
+| `MASTER_WORKBOOK` | Path to the master dataset | `./data/article-link-annotation.csv` (or `.xlsx`) |
 | `SESSION_COOKIE_SECURE` | `1` when served over HTTPS | `0` |
 | `TRUST_PROXY` | `1` behind a reverse proxy (Render, Fly, nginx) | `0` |
 | `SESSION_DAYS` | How long a browser session stays valid | `120` |
@@ -122,7 +122,7 @@ Download the ZIP from `/admin` regularly, or copy the volume directory. Each
 participant file is self-contained and opens directly in Excel.
 
 ### Changing the dataset
-Replace `data/article-link-annotation.xlsx` (same sheet/column names) **before**
+Replace `data/article-link-annotation.csv` (or `.xlsx`) **before**
 participants start. Existing participant files are copies of the old dataset, so
 don't swap the dataset mid-study.
 
